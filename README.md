@@ -13,7 +13,9 @@ What's being built in this app:
 
 ## run
 
+```sh
 go run .
+```
 
 Health check endpoint:
 ```sh
