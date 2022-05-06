@@ -1,15 +1,14 @@
-
-
+# simple todos REST service
 
 ## project overview
 
 What's being built in this app:
+
 - GORM as an ORM to interact with our database
 - GORM database automigration to create tables and seed data
 - sqlite3 file db
 - Request router using gorilla/mux
 - Logrus for logging
-
 
 ## run
 
@@ -18,11 +17,10 @@ go run .
 ```
 
 Health check endpoint:
+
 ```sh
 curl http://localhost:9000/health
 ```
-
-
 
 ## project bootstrap
 
