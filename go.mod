@@ -1,6 +1,6 @@
 module github.com/binlecode/example-todo-go
 
-go 1.17
+go 1.19
 
 require (
 	gorm.io/driver/sqlite v1.2.3
