@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,7 +15,15 @@ import (
 )
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	// log.Info("API health is OK")
+	if r.Method != "GET" {
+		//w.Header().Set("Allow", "GET")
+		w.Header().Set("Allow", http.MethodGet)
+		//w.WriteHeader(405)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Method not allowed"))
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	io.WriteString(w, `{"alive": true}`)
 }
@@ -60,7 +67,19 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Fatal(server.ListenAndServe())
+
+	// Run server in a goroutine, so it doesn't block main thread.
+	// This is NOT needed if this is the last part of the main() function.
+	//go func() {
+	//	if err := server.ListenAndServe(); err != nil {
+	//		log.Fatal(err)
+	//	}
+	//}()
+
+	// any error returned by http.ListenAndServe() is always non-nil
+	err := server.ListenAndServe()
+	log.Fatal(err)
+
 }
 
 func ListTodos(w http.ResponseWriter, r *http.Request) {
@@ -100,13 +119,14 @@ func CreateTodo(w http.ResponseWriter, r *http.Request) {
 	// log.WithFields(log.Fields{"title": title}).Info("add new todo")
 	// todo := &Todo{Title: title, Completed: false}
 
-	rBodyJson, _ := ioutil.ReadAll(r.Body)
+	rBodyJson, _ := io.ReadAll(r.Body)
 	// log.Info("creating todo: ", rBodyJson)
 	var todo Todo
 	json.Unmarshal(rBodyJson, &todo)
-	result := db.Create(todo)
+	result := db.Create(&todo)
 	log.Debug("created new todo:", todo.ID)
 	log.Debug("db rows affected:", result.RowsAffected)
+	log.WithFields(log.Fields{"Id": todo.ID, "Completed": todo.Completed}).Info("Creating todo")
 	respondWithJSON(w, http.StatusCreated, todo)
 }
 
