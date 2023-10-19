@@ -4,5 +4,7 @@
 
 **/*.log
 
+.env
+
 # exclude sqlite db file
 *.db

@@ -7,10 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/gorilla/mux"
-	"gorm.io/driver/sqlite"
+	"github.com/joho/godotenv"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -38,11 +37,15 @@ var db *gorm.DB
 var err error
 
 func main() {
-
 	// Only log the warning severity or above.
 	log.SetLevel(log.DebugLevel)
 	// include calling method in the log
 	log.SetReportCaller(true)
+
+	// load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Error(err)
+	}
 
 	if err := initDatabase(); err != nil {
 		log.Fatal(err)
@@ -52,6 +55,7 @@ func main() {
 	// StrictSlash(true) routes '/abc' to '/abc/'
 	router := mux.NewRouter().StrictSlash(true)
 
+	router.Handle("/static/", http.FileServer(http.Dir("static")))
 	router.HandleFunc("/health", HealthHandler).Methods("GET")
 	router.HandleFunc("/todos/", ListTodos).Methods("GET")
 	router.HandleFunc("/todos/{id}", GetTodo).Methods("GET")
@@ -79,7 +83,6 @@ func main() {
 	// any error returned by http.ListenAndServe() is always non-nil
 	err := server.ListenAndServe()
 	log.Fatal(err)
-
 }
 
 func ListTodos(w http.ResponseWriter, r *http.Request) {
@@ -178,28 +181,13 @@ func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
+	jsonResponse, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(response)
-}
-
-func initDatabase() error {
-	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect to sqlite3 database")
-	}
-
-	// create table and load data
-	db.AutoMigrate(&Todo{})
-	db.Create(&Todo{Title: "Test todo 1", Completed: false})
-	db.Create(&Todo{Title: "Test todo 2", Completed: false})
-
-	// sanity check
-	var todo Todo
-	db.First(&todo, 1)
-	log.Infof("first loaded todo: %v \n", todo)
-
-	return nil
+	w.Write(jsonResponse)
 }
