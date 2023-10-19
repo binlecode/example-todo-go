@@ -10,8 +10,27 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
+
+// build a middleware to check http header token
+// https://www.sohamkamani.com/golang/2019-01-01-jwt-authentication/
+// https://www.sohamkamani.com/golang/2019-01-01-jwt-authentication/#jwt-authentication-in-golang
+func AuthMiddleware(next myHandleFunc) myHandleFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// check header for token, return 401 if not found or not valid
+		token := r.Header.Get("Authorization")
+		if token != "TEST TOKEN" {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Missing Authorization Header"))
+			return
+		}
+
+		// if valid, call next handler function
+		next(w, r)
+	}
+}
+
+type myHandleFunc func(http.ResponseWriter, *http.Request)
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -26,15 +45,6 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	io.WriteString(w, `{"alive": true}`)
 }
-
-type Todo struct {
-	gorm.Model        // id, timestamping, and soft delete!
-	Title      string `json:"title"`
-	Completed  bool   `json:"completed"`
-}
-
-var db *gorm.DB
-var err error
 
 func main() {
 	// Only log the warning severity or above.
@@ -59,7 +69,8 @@ func main() {
 	router.HandleFunc("/health", HealthHandler).Methods("GET")
 	router.HandleFunc("/todos/", ListTodos).Methods("GET")
 	router.HandleFunc("/todos/{id}", GetTodo).Methods("GET")
-	router.HandleFunc("/todos/", CreateTodo).Methods("POST")
+	//router.HandleFunc("/todos/", CreateTodo).Methods("POST")
+	router.HandleFunc("/todos/", AuthMiddleware(CreateTodo)).Methods("POST")
 	router.HandleFunc("/todos/{id}", UpdateTodo).Methods("PUT")
 	router.HandleFunc("/todos/{id}", DeleteTodo).Methods("DELETE")
 
@@ -91,7 +102,7 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
 	log = log.WithField("params", params)
 
 	var todos []Todo
-	err := db.Find(&todos).Error
+	err := DB.Find(&todos).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -107,7 +118,7 @@ func GetTodo(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(params["id"])
 
 	var todo Todo
-	err := db.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
+	err := DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -126,7 +137,7 @@ func CreateTodo(w http.ResponseWriter, r *http.Request) {
 	// log.Info("creating todo: ", rBodyJson)
 	var todo Todo
 	json.Unmarshal(rBodyJson, &todo)
-	result := db.Create(&todo)
+	result := DB.Create(&todo)
 	log.Debug("created new todo:", todo.ID)
 	log.Debug("db rows affected:", result.RowsAffected)
 	log.WithFields(log.Fields{"Id": todo.ID, "Completed": todo.Completed}).Info("Creating todo")
@@ -138,7 +149,7 @@ func UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(params["id"])
 
 	var todo Todo
-	err := db.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
+	err := DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -151,7 +162,7 @@ func UpdateTodo(w http.ResponseWriter, r *http.Request) {
 
 	log.WithFields(log.Fields{"Id": id, "Completed": completed}).Info("Updating todo")
 
-	err = db.Save(&todo).Error
+	err = DB.Save(&todo).Error
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -164,7 +175,7 @@ func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 	var todo Todo
-	err := db.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
+	err := DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -172,7 +183,7 @@ func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 
 	log.WithFields(log.Fields{"Id": id}).Info("Deleting todo")
 
-	err = db.Delete(&todo).Error
+	err = DB.Delete(&todo).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
