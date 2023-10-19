@@ -27,6 +27,7 @@ curl http://localhost:9000/health
 ```sh
 go get -u github.com/gorilla/mux
 go get -u github.com/sirupsen/logrus
+go get -u github.com/joho/godotenv 
 
 go get -u github.com/mattn/go-sqlite3
 go get -u gorm.io/gorm
