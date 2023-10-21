@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -51,24 +50,29 @@ func main() {
 	})
 	router.Use(cr.Handler)
 
-	staticFs := http.FileServer(http.Dir("staticFs"))
-	//router.Handle("/staticFs/", staticFs)
-	// add a middleware to log requests to staticFs
-	router.PathPrefix("/static").Handler(basicMiddleware(http.StripPrefix("/static", staticFs)))
-
-	router.HandleFunc("/health", HealthHandler).Methods("GET")
-
+	// add a global middleware
 	router.Use(basicMiddleware)
 
-	// http://localhost:9000/authorize
-	router.HandleFunc("/authorize", AuthorizeHandler).Methods("POST")
+	// static file server
+	staticFs := http.FileServer(http.Dir("staticFs"))
+	// add a middleware to log requests to staticFs
+	router.PathPrefix("/static").Handler(staticFsMiddleware(http.StripPrefix("/static", staticFs)))
 
-	router.HandleFunc("/todos", ListTodosHandler).Methods("GET")
-	router.HandleFunc("/todos/{id}", GetTodoHandler).Methods("GET")
-	//router.HandleFunc("/todos", CreateTodoHandler).Methods("POST")
-	router.Handle("/todos", tokenMiddleware(http.HandlerFunc(CreateTodoHandler))).Methods("POST")
-	router.HandleFunc("/todos/{id}", UpdateTodoHandler).Methods("PUT")
-	router.HandleFunc("/todos/{id}", DeleteTodoHandler).Methods("DELETE")
+	// health check route
+	router.HandleFunc("/health", HealthHandler).Methods("GET")
+
+	// auth routes
+	srAuth := router.PathPrefix("/auth").Subrouter()
+	srAuth.HandleFunc("/authorize", AuthorizeHandler).Methods("POST")
+	srAuth.Handle("/userInfo", TokenMiddleware(http.HandlerFunc(UserInfoHandler))).Methods("GET")
+
+	srTodos := router.PathPrefix("/todos").Subrouter()
+	srTodos.Use(TokenMiddleware)
+	srTodos.HandleFunc("", ListTodosHandler).Methods("GET")
+	srTodos.HandleFunc("/{id}", GetTodoHandler).Methods("GET")
+	srTodos.HandleFunc("", CreateTodoHandler).Methods("POST")
+	srTodos.HandleFunc("/{id}", UpdateTodoHandler).Methods("PUT")
+	srTodos.HandleFunc("/{id}", DeleteTodoHandler).Methods("DELETE")
 
 	// http.ListenAndServe(":9000", router)
 	server := &http.Server{
@@ -104,35 +108,18 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(jsonResponse)
 }
 
-// https://www.sohamkamani.com/golang/2019-01-01-jwt-authentication/
-// https://www.sohamkamani.com/golang/2019-01-01-jwt-authentication/#jwt-authentication-in-golang
-
-func tokenMiddleware(next http.Handler) http.Handler {
+func basicMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// check header for token, return 401 if not found or not valid
-		token := r.Header.Get("Authorization")
-
-		// validate token
-		claims, err := ValidateToken(token)
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Failed authorization"))
-			return
-		}
-
-		// add claims to context
-		log.Info("claims: ", claims)
-		ctx := context.WithValue(r.Context(), "claims", claims)
-		r = r.WithContext(ctx)
-
-		// call next handler function
+		log.Info("basic middleware called on ", r.URL.Path)
+		// if valid, call next handler function
 		next.ServeHTTP(w, r)
 	})
 }
 
-func basicMiddleware(next http.Handler) http.Handler {
+// StaticFsMiddleware is a middleware to static file server routes
+func staticFsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Info("basic middleware called on ", r.URL.Path)
+		log.Info("static file server middleware called on ", r.URL.Path)
 		// if valid, call next handler function
 		next.ServeHTTP(w, r)
 	})

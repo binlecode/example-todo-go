@@ -7,11 +7,29 @@ import (
 
 // test the auth package
 
+func TestGetUser(t *testing.T) {
+	user, ok := getUser("alice")
+	assert.True(t, ok)
+	assert.Equal(t, "alice", user.Username)
+	user, ok = getUser("wrong")
+	assert.False(t, ok)
+}
+
 func TestGenerateToken(t *testing.T) {
-	username := "test"
-	tokenString, err := GenerateToken(username)
+	user := User{Username: "test", Roles: "admin,editor"}
+	tokenString, err := GenerateToken(user)
 	assert.NotNil(t, tokenString)
 	assert.Nil(t, err)
+}
+
+func TestValidateToken(t *testing.T) {
+	user := User{Username: "test", Roles: "admin,editor"}
+	tokenString, err := GenerateToken(user)
+	assert.NotNil(t, tokenString)
+	claims, err := ValidateToken(tokenString)
+	assert.Nil(t, err)
+	assert.Equal(t, "test", claims.Username)
+	assert.Equal(t, "admin,editor", claims.Roles)
 }
 
 func TestAuthenticate(t *testing.T) {

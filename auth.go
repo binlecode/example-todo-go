@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"time"
@@ -17,9 +19,25 @@ var jwtKey = []byte(getEnv("SECRET_KEY", "this-should-be-a-long-secret"))
 // define a list of users fixture data
 var hashedPassword1, _ = GenerateHashedPassword("password1")
 var hashedPassword2, _ = GenerateHashedPassword("password2")
-var users = map[string]string{
-	"alice": string(hashedPassword1),
-	"bob":   string(hashedPassword2),
+var users = []User{
+	User{"alice", string(hashedPassword1), "admin,editor"},
+	User{"bob", string(hashedPassword2), ""},
+}
+
+// getUser by username from users list
+func getUser(username string) (User, bool) {
+	for _, user := range users {
+		if user.Username == username {
+			return user, true
+		}
+	}
+	return User{}, false
+}
+
+type User struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Roles    string `json:"roles,omitempty"`
 }
 
 // Credentials is a struct to read the username and password from the request body
@@ -31,8 +49,52 @@ type Credentials struct {
 // Claims is a struct to be encoded to a JWT.
 type Claims struct {
 	Username string `json:"username"`
+	// custom claims
+	Roles string `json:"roles,omitempty"`
 	// embed jwt standard claims
 	jwt.RegisteredClaims
+}
+
+// https://www.sohamkamani.com/golang/2019-01-01-jwt-authentication/
+// https://www.sohamkamani.com/golang/2019-01-01-jwt-authentication/#jwt-authentication-in-golang
+
+// TokenMiddleware is a middleware to check the token in the request header
+// and add the claims to the context.
+// If the token is not valid, return 401.
+func TokenMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check header for token, return 401 if not found or not valid
+		token := r.Header.Get("Authorization")
+
+		// validate token
+		claims, err := ValidateToken(token)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Failed authorization"))
+			return
+		}
+
+		// add claims to context
+		log.Info("claims: ", claims)
+		ctx := context.WithValue(r.Context(), "claims", claims)
+		r = r.WithContext(ctx)
+
+		// call next handler function
+		next.ServeHTTP(w, r)
+	})
+}
+
+func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	// get the claims from the context
+	claims, ok := r.Context().Value("claims").(*Claims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Failed authorization"))
+		return
+	}
+
+	// return user info
+	respondWithJSON(w, http.StatusOK, claims)
 }
 
 func AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,18 +123,22 @@ func AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 
 func Authenticate(username, password string) (string, error) {
 	// check if the username exists
-	if !userExists(username) {
-		//return "", jwt.ErrTokenInvalidSubject
+	user, ok := getUser(username)
+	if !ok {
 		return "", errors.New("user not found")
 	}
+	//if !userExists(username) {
+	//	//return "", jwt.ErrTokenInvalidSubject
+	//	return "", errors.New("user not found")
+	//}
 
 	// check if the password is correct
-	if !IsPasswordValid(username, password) {
+	if !IsPasswordValid(user.Username, password) {
 		return "", errors.New("invalid password")
 	}
 
 	// generate a token
-	tokenString, err := GenerateToken(username)
+	tokenString, err := GenerateToken(user)
 	if err != nil {
 		return "", err
 	}
@@ -81,19 +147,26 @@ func Authenticate(username, password string) (string, error) {
 }
 
 func userExists(username string) bool {
-	_, ok := users[username]
-	return ok
+	// find user from users list
+	for u := range users {
+		if users[u].Username == username {
+			return true
+		}
+	}
+	return false
 }
 
 // IsPasswordValid checks if the password is valid for the given username
-// using the bcrypt package to compare the hashed password
+// Return false if user does not exist or password is wrong.
+// Use the bcrypt package to compare the hashed password.
 func IsPasswordValid(username, password string) bool {
-	// get the expected password from the users map
-	expectedPassword, ok := users[username]
-
-	// Return false if the username does not exist or the password is wrong
+	user, ok := getUser(username)
+	if !ok {
+		return false
+	}
 	// Use the bcrypt package to compare the hashed password
-	return ok && bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(password)) == nil
+	expectedPassword := user.Password
+	return bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(password)) == nil
 }
 
 // GenerateHashedPassword returns the bcrypt hash of the password at the given
@@ -103,7 +176,7 @@ func GenerateHashedPassword(password string) ([]byte, error) {
 }
 
 // GenerateToken generates a jwt token for the given username
-func GenerateToken(username string) (string, error) {
+func GenerateToken(user User) (string, error) {
 	// TODO: implement user custom claims
 
 	// Set token expiration time
@@ -111,7 +184,8 @@ func GenerateToken(username string) (string, error) {
 	expTime := time.Now().Add(TOKEN_EXP_TIME_MIN * time.Minute)
 	// create the claims
 	claims := Claims{
-		username,
+		user.Username,
+		user.Roles,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expTime),
 			Issuer:    "test",
