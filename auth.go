@@ -84,7 +84,7 @@ func TokenMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+func UserinfoHandler(w http.ResponseWriter, r *http.Request) {
 	// get the claims from the context
 	claims, ok := r.Context().Value("claims").(*Claims)
 	if !ok {
@@ -118,7 +118,35 @@ func AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 	// return token
 	//w.Write([]byte(tokenString))
 	// return token in JSON
-	respondWithJSON(w, http.StatusOK, map[string]string{"token": tokenString})
+	respondWithJSON(w, http.StatusOK, tokenJson(tokenString))
+}
+
+// RefreshHandler is a handler to refresh the token
+func RefreshHandler(w http.ResponseWriter, r *http.Request) {
+	// get the claims from the context
+	claims, ok := r.Context().Value("claims").(*Claims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Failed authorization"))
+		return
+	}
+
+	// generate a new token
+	tokenString, err := GenerateToken(User{claims.Username, "", claims.Roles})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to generate token"))
+		return
+	}
+
+	// return token
+	//w.Write([]byte(tokenString))
+	// return token in JSON
+	respondWithJSON(w, http.StatusOK, tokenJson(tokenString))
+}
+
+func tokenJson(tokenString string) map[string]string {
+	return map[string]string{"token": tokenString}
 }
 
 func Authenticate(username, password string) (string, error) {

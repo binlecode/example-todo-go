@@ -64,7 +64,8 @@ func main() {
 	// auth routes
 	srAuth := router.PathPrefix("/auth").Subrouter()
 	srAuth.HandleFunc("/authorize", AuthorizeHandler).Methods("POST")
-	srAuth.Handle("/userInfo", TokenMiddleware(http.HandlerFunc(UserInfoHandler))).Methods("GET")
+	srAuth.Handle("/userinfo", TokenMiddleware(http.HandlerFunc(UserinfoHandler))).Methods("GET")
+	srAuth.Handle("/refresh", TokenMiddleware(http.HandlerFunc(RefreshHandler))).Methods("POST")
 
 	srTodos := router.PathPrefix("/todos").Subrouter()
 	srTodos.Use(TokenMiddleware)

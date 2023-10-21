@@ -40,6 +40,28 @@ curl -D - -H 'Origin: http://foo.com' http://localhost:9000/health
 ```
 
 
+## JWT auth
+
+env var `SECRET_KEY` is used to sign JWT token.
+
+`<host>/auth/authorize` endpoint is used to authenticate by user credentials
+and get JWT token.
+
+```sh
+# use curl to get JWT token
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"password1"}' \
+  http://localhost:9000/auth/authorize
+```
+
+`<host>/auth/refresh` endpoint is used to refresh JWT token.
+
+```sh
+
+```
+
+
+
 
 ## project bootstrap
 
