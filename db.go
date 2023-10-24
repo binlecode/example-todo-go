@@ -11,9 +11,6 @@ import (
 // DB is exported global variable to hold the database connection pool.
 var DB *gorm.DB
 
-// a common err variable for error control
-var err error
-
 func getEnv(key, fallback string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -22,7 +19,7 @@ func getEnv(key, fallback string) string {
 	return value
 }
 
-func initDatabase() error {
+func initDatabase() (*gorm.DB, error) {
 	pgHost := os.Getenv("POSTGRES_HOST")
 	if pgHost != "" {
 		DB, err = gorm.Open(postgres.Open("host=" + pgHost +
@@ -31,13 +28,15 @@ func initDatabase() error {
 			" dbname=" + getEnv("POSTGRES_DBNAME", "postgres") +
 			" port=5432 sslmode=disable"))
 		if err != nil {
-			log.Fatal("failed to initialize postgresql database")
+			//log.Fatal("failed to initialize postgresql database")
+			return nil, err
 		}
 	} else {
 		log.Info("postgresql db not set, use sqlite file db")
 		DB, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 		if err != nil {
-			log.Fatal("failed to connect to sqlite3 database")
+			//log.Fatal("failed to connect to sqlite3 database")
+			return nil, err
 		}
 	}
 
@@ -59,7 +58,7 @@ func initDatabase() error {
 	DB.First(&todo)
 	log.Infof("first todo in db: %v \n", todo)
 
-	return nil
+	return DB, nil
 }
 
 type Todo struct {

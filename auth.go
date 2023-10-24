@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const TOKEN_EXP_TIME_MIN = 15
+const TokenExpTimeMin = 15
 
 // set a global secret key for signing the jwt
 var jwtKey = []byte(getEnv("SECRET_KEY", "this-should-be-a-long-secret"))
@@ -209,7 +209,7 @@ func GenerateToken(user User) (string, error) {
 
 	// Set token expiration time
 	// In JWT, the expiry time is expressed as unix milliseconds
-	expTime := time.Now().Add(TOKEN_EXP_TIME_MIN * time.Minute)
+	expTime := time.Now().Add(TokenExpTimeMin * time.Minute)
 	// create the claims
 	claims := Claims{
 		user.Username,
