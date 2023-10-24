@@ -10,13 +10,13 @@ import (
 	"strconv"
 )
 
-func ListTodosHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) ListTodosHandler(w http.ResponseWriter, r *http.Request) {
 	log := log.WithField("action", "ListTodosHandler")
 	params := mux.Vars(r)
 	log = log.WithField("params", params)
 
 	var todos []Todo
-	err := DB.Find(&todos).Error
+	err := app.DB.Find(&todos).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -26,13 +26,13 @@ func ListTodosHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, todos)
 }
 
-func GetTodoHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) GetTodoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	log := log.WithField("params", params)
 	id, _ := strconv.Atoi(params["id"])
 
 	var todo Todo
-	err := DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
+	err := app.DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -42,7 +42,7 @@ func GetTodoHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, todo)
 }
 
-func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	// title := r.FormValue("title")
 	// log.WithFields(log.Fields{"title": title}).Info("add new todo")
 	// todo := &Todo{Title: title, Completed: false}
@@ -56,7 +56,7 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	result := DB.Create(&todo)
+	result := app.DB.Create(&todo)
 	if result == nil {
 		log.Error(fmt.Sprintf("failed to create todo: %+v", todo))
 		w.WriteHeader(http.StatusBadRequest)
@@ -68,12 +68,12 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, todo)
 }
 
-func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 
 	var todo Todo
-	err := DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
+	err := app.DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -86,7 +86,7 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.WithFields(log.Fields{"Id": id, "Completed": completed}).Info("Updating todo")
 
-	err = DB.Save(&todo).Error
+	err = app.DB.Save(&todo).Error
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -95,11 +95,11 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, todo)
 }
 
-func DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 	var todo Todo
-	err := DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
+	err := app.DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -107,7 +107,7 @@ func DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.WithFields(log.Fields{"Id": id}).Info("Deleting todo")
 
-	err = DB.Delete(&todo).Error
+	err = app.DB.Delete(&todo).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

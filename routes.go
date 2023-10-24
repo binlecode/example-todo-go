@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"io"
 	"net/http"
 )
 
@@ -31,15 +32,15 @@ func (app *App) routes() *mux.Router {
 	router.Use(cr.Handler)
 
 	// add a global middleware
-	router.Use(basicMiddleware)
+	router.Use(app.BasicMiddleware)
 
 	// static file server
 	staticFs := http.FileServer(http.Dir("staticFs"))
 	// add a middleware to log requests to staticFs
-	router.PathPrefix("/static").Handler(staticFsMiddleware(http.StripPrefix("/static", staticFs)))
+	router.PathPrefix("/static").Handler(app.StaticFsMiddleware(http.StripPrefix("/static", staticFs)))
 
 	// health check route
-	router.HandleFunc("/health", HealthHandler).Methods("GET")
+	router.HandleFunc("/health", app.HealthHandler).Methods("GET")
 
 	// auth routes
 	srAuth := router.PathPrefix("/auth").Subrouter()
@@ -49,10 +50,24 @@ func (app *App) routes() *mux.Router {
 
 	srTodos := router.PathPrefix("/todos").Subrouter()
 	srTodos.Use(TokenMiddleware)
-	srTodos.HandleFunc("", ListTodosHandler).Methods("GET")
-	srTodos.HandleFunc("/{id}", GetTodoHandler).Methods("GET")
-	srTodos.HandleFunc("", CreateTodoHandler).Methods("POST")
-	srTodos.HandleFunc("/{id}", UpdateTodoHandler).Methods("PUT")
-	srTodos.HandleFunc("/{id}", DeleteTodoHandler).Methods("DELETE")
+	srTodos.HandleFunc("", app.ListTodosHandler).Methods("GET")
+	srTodos.HandleFunc("/{id}", app.GetTodoHandler).Methods("GET")
+	srTodos.HandleFunc("", app.CreateTodoHandler).Methods("POST")
+	srTodos.HandleFunc("/{id}", app.UpdateTodoHandler).Methods("PUT")
+	srTodos.HandleFunc("/{id}", app.DeleteTodoHandler).Methods("DELETE")
 	return router
+}
+
+func (app *App) HealthHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		//w.Header().Set("Allow", "GET")
+		w.Header().Set("Allow", http.MethodGet)
+		//w.WriteHeader(405)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Method not allowed"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	io.WriteString(w, `{"alive": true}`)
 }

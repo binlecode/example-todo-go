@@ -8,18 +8,9 @@ import (
 	"os"
 )
 
-// DB is exported global variable to hold the database connection pool.
-var DB *gorm.DB
-
-func getEnv(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
-	}
-	return value
-}
-
 func initDatabase() (*gorm.DB, error) {
+	var DB *gorm.DB
+	var err error
 	pgHost := os.Getenv("POSTGRES_HOST")
 	if pgHost != "" {
 		DB, err = gorm.Open(postgres.Open("host=" + pgHost +
