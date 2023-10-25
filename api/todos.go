@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binlecode/example-todo-go/internal"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -15,7 +16,7 @@ func (app *App) ListTodosHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	log = log.WithField("params", params)
 
-	var todos []Todo
+	var todos []internal.Todo
 	err := app.DB.Find(&todos).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -31,7 +32,7 @@ func (app *App) GetTodoHandler(w http.ResponseWriter, r *http.Request) {
 	log := log.WithField("params", params)
 	id, _ := strconv.Atoi(params["id"])
 
-	var todo Todo
+	var todo internal.Todo
 	err := app.DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -49,7 +50,7 @@ func (app *App) CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 
 	rBodyJson, _ := io.ReadAll(r.Body)
 	// log.Info("creating todo: ", rBodyJson)
-	var todo Todo
+	var todo internal.Todo
 	err := json.Unmarshal(rBodyJson, &todo)
 	if err != nil {
 		log.Error(err)
@@ -72,7 +73,7 @@ func (app *App) UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 
-	var todo Todo
+	var todo internal.Todo
 	err := app.DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -98,7 +99,7 @@ func (app *App) UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 func (app *App) DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
-	var todo Todo
+	var todo internal.Todo
 	err := app.DB.First(&todo, id).Error // gorm.ErrRecordNotFound if not found
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)

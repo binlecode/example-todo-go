@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/binlecode/example-todo-go/internal"
 	"github.com/golang-jwt/jwt/v5"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -11,10 +12,10 @@ import (
 	"time"
 )
 
-const TokenExpTimeMin = 15
+var TokenExpTimeMin int = internal.GetEnvInt("TOKEN_EXP_TIME_MIN", 15)
 
 // set a global secret key for signing the jwt
-var jwtKey = []byte(GetEnv("SECRET_KEY", "this-should-be-a-long-secret"))
+var jwtKey = []byte(internal.GetEnv("SECRET_KEY", "this-should-be-a-long-secret"))
 
 // define a list of users fixture data
 var hashedPassword1, _ = GenerateHashedPassword("password1")
@@ -209,7 +210,7 @@ func GenerateToken(user User) (string, error) {
 
 	// Set token expiration time
 	// In JWT, the expiry time is expressed as unix milliseconds
-	expTime := time.Now().Add(TokenExpTimeMin * time.Minute)
+	expTime := time.Now().Add(time.Duration(TokenExpTimeMin) * time.Minute)
 	// create the claims
 	claims := Claims{
 		user.Username,

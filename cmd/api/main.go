@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/binlecode/example-todo-go/api"
+	"github.com/binlecode/example-todo-go/internal"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -19,7 +20,7 @@ func main() {
 	// include calling method in the log
 	log.SetReportCaller(true)
 
-	db, err := api.InitDatabase()
+	db, err := internal.InitDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,7 +29,7 @@ func main() {
 		DB: db,
 	}
 
-	serverAddr := api.GetEnv("SERVER_ADDR", "127.0.0.1:9000")
+	serverAddr := internal.GetEnv("SERVER_ADDR", "127.0.0.1:9000")
 
 	// http.ListenAndServe(":9000", router)
 	server := &http.Server{
