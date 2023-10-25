@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -8,15 +8,15 @@ import (
 	"os"
 )
 
-func initDatabase() (*gorm.DB, error) {
+func InitDatabase() (*gorm.DB, error) {
 	var DB *gorm.DB
 	var err error
 	pgHost := os.Getenv("POSTGRES_HOST")
 	if pgHost != "" {
 		DB, err = gorm.Open(postgres.Open("host=" + pgHost +
-			" user=" + getEnv("POSTGRES_USER", "postgres") +
-			" password=" + getEnv("POSTGRES_PASSWORD", "postgres") +
-			" dbname=" + getEnv("POSTGRES_DBNAME", "postgres") +
+			" user=" + GetEnv("POSTGRES_USER", "postgres") +
+			" password=" + GetEnv("POSTGRES_PASSWORD", "postgres") +
+			" dbname=" + GetEnv("POSTGRES_DBNAME", "postgres") +
 			" port=5432 sslmode=disable"))
 		if err != nil {
 			//log.Fatal("failed to initialize postgresql database")

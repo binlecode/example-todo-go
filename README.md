@@ -16,6 +16,20 @@ What's in this app:
 go run .
 ```
 
+Compile:
+
+```sh
+go build -o bin/example_todo_go_api github.com/binlecode/example-todo-go/cmd/api
+```
+
+Run binary:
+
+```sh
+./bin/example_todo_go_api
+```
+
+
+
 ```sh
 # run a local docker postgres instance
 docker run --name example-todo-go-postgres \

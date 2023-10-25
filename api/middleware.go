@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -13,7 +13,7 @@ func (app *App) BasicMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// StaticFsMiddleware is a middleware to static file server routes
+// StaticFsMiddleware is a middleware to static file server Routes
 func (app *App) StaticFsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Info("static file server middleware called on ", r.URL.Path)

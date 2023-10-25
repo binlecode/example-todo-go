@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 const TokenExpTimeMin = 15
 
 // set a global secret key for signing the jwt
-var jwtKey = []byte(getEnv("SECRET_KEY", "this-should-be-a-long-secret"))
+var jwtKey = []byte(GetEnv("SECRET_KEY", "this-should-be-a-long-secret"))
 
 // define a list of users fixture data
 var hashedPassword1, _ = GenerateHashedPassword("password1")

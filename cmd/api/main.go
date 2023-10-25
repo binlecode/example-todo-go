@@ -1,24 +1,16 @@
 package main
 
 import (
+	"github.com/binlecode/example-todo-go/api"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"net/http"
 	"time"
 )
 
-// App is application object to hold the dependencies
-type App struct {
-	DB *gorm.DB
-}
-
-// a global error variable to hold any error
-var err error
-
 func main() {
 	// load .env file
-	if err = godotenv.Load(".env"); err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Error(err)
 	}
 
@@ -27,20 +19,20 @@ func main() {
 	// include calling method in the log
 	log.SetReportCaller(true)
 
-	db, err := initDatabase()
+	db, err := api.InitDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	app := App{
+	app := api.App{
 		DB: db,
 	}
 
-	serverAddr := getEnv("SERVER_ADDR", "127.0.0.1:9000")
+	serverAddr := api.GetEnv("SERVER_ADDR", "127.0.0.1:9000")
 
 	// http.ListenAndServe(":9000", router)
 	server := &http.Server{
-		Handler: app.routes(),
+		Handler: app.Routes(),
 		Addr:    serverAddr,
 		// good practice: always set timeout
 		ReadTimeout:    5 * time.Second,

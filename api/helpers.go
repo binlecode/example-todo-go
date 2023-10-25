@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func getEnv(key, fallback string) string {
+func GetEnv(key, fallback string) string {
 	value := os.Getenv(key)
 	if value == "" {
 		return fallback

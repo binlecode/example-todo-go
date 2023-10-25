@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"github.com/gorilla/mux"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func (app *App) routes() *mux.Router {
+func (app *App) Routes() *mux.Router {
 	// StrictSlash(true) makes a redirect from '/abc' to '/abc/' or vise versa,
 	// depending on whether the route is registered with a trailing slash or not.
 	// Default is set to false, thus '/abc' and '/abc/' are treated differently
@@ -35,14 +35,14 @@ func (app *App) routes() *mux.Router {
 	router.Use(app.BasicMiddleware)
 
 	// static file server
-	staticFs := http.FileServer(http.Dir("staticFs"))
+	//staticFs := http.FileServer(http.Dir("staticFs"))
 	// add a middleware to log requests to staticFs
-	router.PathPrefix("/static").Handler(app.StaticFsMiddleware(http.StripPrefix("/static", staticFs)))
+	//router.PathPrefix("/static").Handler(app.StaticFsMiddleware(http.StripPrefix("/static", staticFs)))
 
 	// health check route
 	router.HandleFunc("/health", app.HealthHandler).Methods("GET")
 
-	// auth routes
+	// auth Routes
 	srAuth := router.PathPrefix("/auth").Subrouter()
 	srAuth.HandleFunc("/authorize", AuthorizeHandler).Methods("POST")
 	srAuth.Handle("/userinfo", TokenMiddleware(http.HandlerFunc(UserinfoHandler))).Methods("GET")

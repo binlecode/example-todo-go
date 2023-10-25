@@ -3,8 +3,11 @@
 .vscode/
 
 **/*.log
-
-.env
+bin/
 
 # exclude sqlite db file
 *.db
+
+.env
+
+
